@@ -7,6 +7,11 @@ class S3Controller {
     func buckets(_ req: Request) -> EventLoopFuture<[String]> {
         return s3.listBuckets().map { output in
             return output.buckets?.compactMap { $0.name } ?? []
+        }.flatMapErrorThrowing { error in
+            if let error = error as? AWSErrorType {
+                throw Abort(.badRequest, reason: error.description)
+            }
+            throw error
         }
     }
     
@@ -15,8 +20,7 @@ class S3Controller {
         let request = S3.ListObjectsRequest(bucket: bucket, maxKeys: 100)
         return s3.listObjects(request).map { output in
             return output.contents?.compactMap { $0.key } ?? []
-        }
-        .flatMapErrorThrowing { error in
+        }.flatMapErrorThrowing { error in
             if let error = error as? AWSErrorType {
                 throw Abort(.badRequest, reason: error.description)
             }
