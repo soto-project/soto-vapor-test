@@ -1,4 +1,4 @@
-import S3
+import AWSS3
 import Vapor
 
 class S3Controller {
