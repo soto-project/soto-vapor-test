@@ -1,6 +1,8 @@
 import AWSS3
 import Vapor
 
+extension S3.HeadObjectOutput : Content {}
+
 class S3Controller {
     let s3 = S3(region: .euwest1)
     
@@ -12,6 +14,19 @@ class S3Controller {
                 throw Abort(.badRequest, reason: error.description)
             }
             throw error
+        }
+    }
+    
+    func headObject(_ req: Request) -> EventLoopFuture<S3.HeadObjectOutput> {
+        let bucket = req.parameters.get("bucket")!
+        let file = req.parameters.get("file")!
+        let request = S3.HeadObjectRequest(bucket: bucket, key: file)
+        return s3.headObject(request)
+            .flatMapErrorThrowing { error in
+                if let error = error as? AWSErrorType {
+                    throw Abort(.badRequest, reason: error.description)
+                }
+                throw error
         }
     }
     

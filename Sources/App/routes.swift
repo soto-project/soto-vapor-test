@@ -10,6 +10,7 @@ func routes(_ app: Application) throws {
     }
     
     let s3Controller = S3Controller()
-    app.get("bucket", use: s3Controller.buckets)
-    app.get("bucket", ":bucket", use: s3Controller.objects)
+    app.get("s3", use: s3Controller.buckets)
+    app.get("s3", ":bucket", use: s3Controller.objects)
+    app.get("s3", ":bucket", ":file", use: s3Controller.headObject)
 }
