@@ -1,5 +1,2 @@
 .build
 .swiftpm/
-!.build/dependencies-state.json
-!.build/checkouts
-!.build/repositories
