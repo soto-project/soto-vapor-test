@@ -1,7 +1,27 @@
 import AWSS3
 import Vapor
 
-extension S3.HeadObjectOutput : Content {}
+extension S3.HeadObjectOutput : Content {
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(contentLength, forKey: .contentLength)
+        try container.encode(contentType, forKey: .contentType)
+        try container.encode(eTag, forKey: .eTag)
+        try container.encode(lastModified, forKey: .lastModified)
+        try container.encode(storageClass, forKey: .storageClass)
+        try container.encode(versionId, forKey: .versionId)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case contentLength = "Content-Length"
+        case contentType = "Content-Type"
+        case eTag = "ETag"
+        case lastModified = "Last-Modified"
+        case storageClass = "x-amz-storage-class"
+        case versionId = "x-amz-version-id"
+    }
+}
 
 class S3Controller {
     let s3 = S3(region: .euwest1)
