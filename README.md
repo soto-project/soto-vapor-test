@@ -20,7 +20,13 @@ docker run -p 8080:8080 -e AWS_ACCESS_KEY_ID=<my access key> -e AWS_SECRET_ACCES
 
 ### Testing the app
 
-The app runs on port 8080. Bring up a web browser and enter `localhost:8080` and it should display the text "It works!". If you enter `localhost:8080/s3` it will display a list of your S3 buckets. If you enter `localhost:8080/s3/<bucket-name>` it will display all the objects in the specified bucket and finally if you enter `localhost:8080/s3/<bucket-name>/<file-name>` it will display details about the specified file. If you are running this on a public network please don't leave it running as you exposing the contents of all your S3 buckets to the world.
+The app runs on port 8080. 
+- Bring up a web browser and enter `localhost:8080` and it should display the text "It works!". 
+- If you enter `localhost:8080/s3` it will display a list of your S3 buckets. 
+- If you enter `localhost:8080/s3/<bucket-name>` it will display all the objects in the specified bucket 
+- And finally if you enter `localhost:8080/s3/<bucket-name>/<file-name>` it will display details about the specified file.
+
+If you are running this on a public network please don't leave it running as you are exposing the contents of all your S3 buckets to the world.
 
 ### Publishing your docker container
 
@@ -55,4 +61,6 @@ First you need to setup an IAM role for your EC2 instance. This can be done thro
 ```
 sudo docker run -p 8080:8080 <your username>/aws-vapor-test:1.0
 ```
-Bring up a web browser, type in the IP address of your EC2 instance plus the port `:8080` and you should get the text "It works!". You can then interact with the app as detailed above. 
+Bring up a web browser, type in the IP address of your EC2 instance plus the port `:8080` and you should get the text "It works!". You can then interact with the app as detailed [above](#testing-the-app). 
+
+
