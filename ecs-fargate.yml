@@ -88,7 +88,7 @@ Resources:
             Service: ecs-tasks.amazonaws.com
           Action: 'sts:AssumeRole'
       Policies:
-      - PolicyName: s3access 
+      - PolicyName: aws-vapor-test-s3access 
         PolicyDocument:
           Version: 2012-10-17
           Statement:

@@ -160,7 +160,7 @@ Resources:
             Service: ec2.amazonaws.com
           Action: 'sts:AssumeRole'
       Policies:
-      - PolicyName: s3access 
+      - PolicyName: aws-vapor-test-s3access 
         PolicyDocument:
           Version: 2012-10-17
           Statement:
@@ -170,7 +170,7 @@ Resources:
           - Effect: Allow
             Action: 's3:*'
             Resource: !Join ['', ['arn:aws:s3:::', !Ref S3TestBucket, "/*"]]
-      - PolicyName: ecrReadOnlyAccess
+      - PolicyName: aws-vapor-test-ecrReadOnlyAccess
         PolicyDocument:
           Version: 2012-10-17
           Statement:
