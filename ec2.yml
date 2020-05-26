@@ -1,0 +1,252 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: An example CloudFormation template for Fargate.
+Parameters:
+  
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+  InstanceType: 
+    Type: String
+    Default: m5.large
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: The ssh key to include from the beginning
+  
+Resources:
+
+  Instance:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          bootstrap:
+            - cfnhupcfg
+            - swift
+            - docker
+        cfnhupcfg:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.Instance.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Instance --region ${AWS::Region} --configsets bootstrap
+                runas=root
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            "/lib/systemd/system/cfn-hup.service":
+              content: !Sub |
+                [Unit]
+                Description=cfn-hup daemon
+                [Service]
+                Type=simple
+                ExecStart=/opt/aws/bin/cfn-hup
+                Restart=always
+                [Install]
+                WantedBy=multi-user.target
+          commands:
+            01enable_cfn_hup:
+              command: !Sub |
+                systemctl enable cfn-hup.service
+            02start_cfn_hup:
+              command: !Sub |
+                systemctl start cfn-hup.service
+        swift:
+          packages:
+            yum:
+              git: []
+              libuuid-devel : []
+              libicu-devel : []
+              libedit-devel : []
+              libxml2-devel : []
+              sqlite-devel : []
+              python-devel : []
+              ncurses-devel : []
+              libcurl-devel : []
+              tzdata : []
+              libtool : []
+              libatomic: []
+              gcc-c++ : []
+              jq : []
+              tar : []
+              zip: []
+          commands:
+            install1:
+              command: curl --output ./swift-5.2.4-RELEASE-amazonlinux2.tar.gz https://swift.org/builds/swift-5.2.4-release/amazonlinux2/swift-5.2.4-RELEASE/swift-5.2.4-RELEASE-amazonlinux2.tar.gz
+            install2:
+              command: tar -xzf swift-5.2.4-RELEASE-amazonlinux2.tar.gz --directory=/ --strip-components=1 \
+            install3:
+              command: rm swift-5.2.4-RELEASE-amazonlinux2.tar.gz
+        docker:
+          commands: 
+            install1:
+              command: amazon-linux-extras install docker
+            install2:
+              command: service docker start
+            install3:
+              command: usermod -a -G docker ec2-user
+    Properties:
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref InstanceProfile
+      KeyName: !Ref KeyName
+      InstanceType: !Ref InstanceType
+      NetworkInterfaces: 
+      - AssociatePublicIpAddress: true
+        DeviceIndex: "0"
+        GroupSet: 
+        - !Ref InstanceSecurityGroup
+        SubnetId: !Ref PublicSubnetA
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Instance --region ${AWS::Region} --configsets bootstrap
+          /opt/aws/bin/cfn-hup || exit 1
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+
+
+  InstanceSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Instance Security Group
+      SecurityGroupEgress:
+      # allow all outgoing
+      - IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+      # allow all ssh incoming
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      # allow all http incoming
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      # allow all https incoming
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+      # allow all http incoming
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: 'sts:AssumeRole'
+      Policies:
+      - PolicyName: s3access 
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: 's3:ListBucket'
+            Resource: !Join ['', ['arn:aws:s3:::', !Ref S3TestBucket]]
+          - Effect: Allow
+            Action: 's3:*'
+            Resource: !Join ['', ['arn:aws:s3:::', !Ref S3TestBucket, "/*"]]
+      - PolicyName: ecrReadOnlyAccess
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - "ecr:GetAuthorizationToken"
+            - "ecr:BatchCheckLayerAvailability"
+            - "ecr:GetDownloadUrlForLayer"
+            - "ecr:GetRepositoryPolicy"
+            - "ecr:DescribeRepositories"
+            - "ecr:ListImages"
+            - "ecr:DescribeImages"
+            - "ecr:BatchGetImage"
+            - "ecr:GetLifecyclePolicy"
+            - "ecr:GetLifecyclePolicyPreview"
+            - "ecr:ListTagsForResource"
+            - "ecr:DescribeImageScanFindings"
+            Resource: "*"
+
+  InstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Path: "/"
+      Roles: 
+      - !Ref InstanceRole
+
+  S3TestBucket:
+    Type: AWS::S3::Bucket
+  
+
+#--------------------------------------------------------------------------------------------------#
+# VPC                                                                                              #
+#--------------------------------------------------------------------------------------------------#
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.10.0.0/16
+
+  # Public subnets
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "a"]] 
+      CidrBlock: 10.10.0.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+
+  # Internet Gateway to attach to public subnets
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  InternetGatewayAttachToVPC:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # Public Route Table with Routes and Associations
+
+  PublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+
+  InternetRouteForPublicSubnets:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetARouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetA
