@@ -28,7 +28,7 @@ public extension Application {
         public var client: AWSClient {
             get {
                 guard let client = self.application.storage[ClientKey.self] else {
-                    fatalError("AWSClient not setup. Use application.aws = ...")
+                    fatalError("AWSClient not setup. Use application.aws.client = ...")
                 }
                 return client
             }
@@ -37,23 +37,36 @@ public extension Application {
             }
         }
 
-        struct S3Key: StorageKey {
-            typealias Value = S3
+        struct ServiceKey<T>: StorageKey {
+            typealias Value = T
         }
 
-        public var s3: S3 {
-            get {
-                guard let s3 = self.application.storage[S3Key.self] else {
-                    fatalError("AWSClient not setup. Use application.aws = ...")
-                }
-                return s3
+        func getService<T>() -> T {
+            return getService(key: ServiceKey<T>.self)
+        }
+
+        func setService<T>(_ service: T) {
+            setService(service, key: ServiceKey<T>.self)
+        }
+
+        func getService<T, Key: StorageKey>(key: Key.Type) -> T where Key.Value == T {
+            guard let service = self.application.storage[Key.self] else {
+                fatalError("\(T.self) not setup. Use application.aws.client = ...")
             }
-            nonmutating set {
-                self.application.storage[S3Key.self] = newValue
-            }
+            return service
+        }
+
+        func setService<T, Key: StorageKey>(_ service: T, key: Key.Type) where Key.Value == T {
+            self.application.storage[Key.self] = service
         }
 
         let application: Application
     }
 }
 
+extension Application.AWS {
+    public var s3: S3 {
+        get { getService() }
+        nonmutating set { setService(newValue) }
+    }
+}
