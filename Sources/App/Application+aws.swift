@@ -33,7 +33,9 @@ public extension Application {
                 return client
             }
             nonmutating set {
-                self.application.storage[ClientKey.self] = newValue
+                self.application.storage.set(ClientKey.self, to: newValue) {
+                    try $0.syncShutdown()
+                }
             }
         }
 
@@ -65,8 +67,32 @@ public extension Application {
 }
 
 extension Application.AWS {
-    public var s3: S3 {
+/*    public var s3: S3 {
         get { getService() }
         nonmutating set { setService(newValue) }
+    }*/
+}
+
+extension Application.AWS {
+    struct S3Key: StorageKey {
+        typealias Value = S3
+    }
+
+    public var s3: S3 {
+        get {
+            guard let s3 = self.application.storage[S3Key.self] else {
+                fatalError("S3 not setup. Use application.aws.s3 = ...")
+            }
+            return s3
+        }
+        nonmutating set {
+            self.application.storage[S3Key.self] = newValue
+        }
+    }
+}
+
+public extension Request.AWS {
+    var s3: S3 {
+        return request.application.aws.s3
     }
 }

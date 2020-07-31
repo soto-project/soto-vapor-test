@@ -26,9 +26,9 @@ public extension Request {
             return request.application.aws.client
         }
         
-        var s3: S3 {
+        /*var s3: S3 {
             return request.application.aws.s3
-        }
+        }*/
         
         let request: Request
     }

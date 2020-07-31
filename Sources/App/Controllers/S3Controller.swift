@@ -27,7 +27,7 @@ class S3Controller {
 
     func buckets(_ req: Request) -> EventLoopFuture<[String]> {
         print("buckets")
-        return req.aws.s3.listBuckets().map { output in
+        return req.aws.s3.listBuckets(logger: req.logger).map { output in
             return output.buckets?.compactMap { $0.name } ?? []
         }.flatMapErrorThrowing { error in
             print("\(error)")
@@ -42,7 +42,7 @@ class S3Controller {
         let bucket = req.parameters.get("bucket")!
         let file = req.parameters.get("file")!
         let request = S3.HeadObjectRequest(bucket: bucket, key: file)
-        return req.aws.s3.headObject(request)
+        return req.aws.s3.headObject(request, logger: req.logger)
             .flatMapErrorThrowing { error in
                 if let error = error as? AWSErrorType {
                     throw Abort(.badRequest, reason: error.description)
@@ -54,7 +54,7 @@ class S3Controller {
     func objects(_ req: Request) -> EventLoopFuture<[String]> {
         let bucket = req.parameters.get("bucket")!
         let request = S3.ListObjectsRequest(bucket: bucket, maxKeys: 100)
-        return req.aws.s3.listObjects(request).map { output in
+        return req.aws.s3.listObjects(request, logger: req.logger).map { output in
             return output.contents?.compactMap { $0.key } ?? []
         }.flatMapErrorThrowing { error in
             if let error = error as? AWSErrorType {
