@@ -9,11 +9,11 @@ let package = Package(
     dependencies: [
         // 💧 A server-side Swift web framework.
         .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0"),
-        .package(url: "https://github.com/swift-aws/aws-sdk-swift", .branch("main"))
+        .package(url: "https://github.com/soto-project/soto.git", .branch("main"))
     ],
     targets: [
         .target(name: "App", dependencies: [
-            .product(name: "AWSS3", package: "aws-sdk-swift"),
+            .product(name: "SotoS3", package: "soto"),
             .product(name: "Vapor", package: "vapor")
         ]),
         .target(name: "Run", dependencies: ["App"]),
