@@ -1,4 +1,4 @@
-import AWSS3
+import SotoS3
 import Vapor
 
 extension S3.HeadObjectOutput : Content {

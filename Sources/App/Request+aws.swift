@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSS3
+import SotoS3
 import Vapor
 
 public extension Request {
